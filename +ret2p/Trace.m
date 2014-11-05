@@ -127,24 +127,6 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     dt = 1/sr;
                     time = (0:dt:(nT-1)*dt) + dt/2;
                     
-                    % for BCs, adjust sampling rates
-                    if strcmp(target,'BC_T')
-                        if sr ~=128
-                            sr2 = 128;
-                            nT2 = ceil(sr2/sr * nT);
-                            dt2 = 1/sr2;
-                            time2 = (0:dt2:(nT2-1)*dt2) + dt2/2;
-                            data2 = zeros(nT2,size(data,2));
-                            for i=1:size(data,2)
-                                data2(:,i) = interp1(time,data(:,i),time2);
-                            end
-                            data = data2;
-                            time = time2;
-                            sr = sr2;
-                        end
-                        disp(length(time))
-                    end
-                    
                     % remove baseline
                     baseline = median(data(1:ceil(sr),:),1);
                     data = bsxfun(@minus,data,baseline);
@@ -193,24 +175,6 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     sr = 1/y.dx(1);
                     dt = 1/sr;
                     time = (0:dt:(nT-1)*dt) + dt/2;
-                    
-                    % for BCs, adjust sampling rates
-                    if strcmp(target,'BC_T')
-                        if sr ~=128
-                            sr2 = 128;
-                            nT2 = ceil(sr2/sr * nT);
-                            dt2 = 1/sr2;
-                            time2 = (0:dt2:(nT2-1)*dt2) + dt2/2;
-                            data2 = zeros(nT2,size(data,2));
-                            for i=1:size(data,2)
-                                data2(:,i) = interp1(time,data(:,i),time2);
-                            end
-                            data = data2;
-                            time = time2;
-                            sr = sr2;
-                        end
-                        disp(length(time))
-                    end
                     
                     % remove baseline
                     baseline = median(data(1:20,:),1);

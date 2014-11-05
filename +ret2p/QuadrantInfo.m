@@ -1,10 +1,14 @@
 %{
-ret2p.QuadrantInfo (imported) # info about quadrants
+ret2p.QuadrantInfo (imported) # info about quadrant
 
 -> ret2p.Quadrant
 ---
-offset_x = 0   : float                  # offset of the quadrant in microns
-offset_y = 0   : float                  # offset of the quadrant in microns
+offset_x = 0   : float                  # offset of the scan in microns
+offset_y = 0   : float                  # offset of the scan in microns
+orientation=null            : longblob          # upper, lower, right, left border
+nt_pos=null                 : double        # nasal-temporal position
+dv_pos=null                 : double        # dorso-ventral position
+        
 %}
 
 classdef QuadrantInfo < dj.Relvar & dj.AutoPopulate
@@ -25,30 +29,50 @@ classdef QuadrantInfo < dj.Relvar & dj.AutoPopulate
             % get path information & read file
             path = fetch1(ret2p.Dataset(key),'path');
             folder = fetch1(ret2p.Quadrant(key),'folder');
-            target = fetch1(ret2p.Dataset(key),'target');
             
-            % offset
-            file = 'Cells.ibw';
-            
-            if exist(getLocalPath(fullfile(path,folder,file)),'file') && ...
-                    strcmp(target,'RGC')
-                y = IBWread(getLocalPath(fullfile(path,folder,file)));
-                pos = y.y(:,4:5);
-            else
+            % bipolar cell terminals
+            if strcmp(fetch1(ret2p.Dataset(key),'target'),'BC_T')
+                file = getLocalPath(fullfile(path,'FieldPosition.ibw'));
+                if exist(file,'file')
+                    y = IBWread(file);
+                    dv_pos = y.y(key.quadrant_num+1,1);
+                    nt_pos = y.y(key.quadrant_num+1,2);
+                    orientation = y.y(key.quadrant_num+1,3:end);
+                end
                 pos = [0 0];
-            end
+                
+            % ganglion cell cell bodies
+            elseif strcmp(fetch1(ret2p.Dataset(key),'target'),'RGC_CB')
+                
+                % field offset
+                file = getLocalPath(fullfile(path,folder,'Cells.ibw'));
+                if exist(file,'file')
+                    y = IBWread(file);
+                    pos = y.y(:,4:5);
+                    pos = mean(pos,1);
+                end
+                
+                % field position
+                file = getLocalPath(fullfile(path,'FieldPosition.ibw'));
+                if exist(file,'file')
+                    y = IBWread(file);
+                    dv_pos = y.y(1);
+                    nt_pos = y.y(2);
+                    orientation = y.y(3:end);
+                end
+                
+            end      
             
-            pos = mean(pos,1);
             
             % fill tuple
             tuple = key;
             tuple.offset_x = pos(1);
             tuple.offset_y = pos(2);
+            tuple.orientation = orientation;
+            tuple.nt_pos = nt_pos;
+            tuple.dv_pos = dv_pos;
             
             self.insert(tuple);
-            
-            makeTuples(ret2p.Sim,key)           
-            
         end
     end
     

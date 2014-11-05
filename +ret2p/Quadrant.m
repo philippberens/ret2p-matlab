@@ -2,12 +2,9 @@
 ret2p.Quadrant (manual) # List of Quadrants for each dataset
 
 -> ret2p.Dataset
-quadrant_num                : tinyint unsigned  # number of scan
+quadrant_num    : tinyint unsigned      # number of scan
 ---
-folder                      : varchar(255)      # path to files
-orientation=null            : longblob          # upper, lower, right, left border
-nt_pos=null                     : double        # nasal-temporal position
-dv_pos=null                     : double        # dorso-ventral position
+folder                      : varchar(255)                  # path to files
 %}
 
 classdef Quadrant < dj.Relvar
