@@ -6,7 +6,7 @@ mouse_id        : double                # id of mouse
 retina          : tinyint unsigned      # number of retina 
 qset            : tinyint unsigned      # multiple contiguous regions
 ---
-mouse_type="Bl/6"           : enum("Bl/6","ChATCre","PvCreTdT","PCP2TdT") # mouse line
+mouse_type="Bl/6"           : enum("Bl/6","ChATCre","PvCreTdT","PCP2TdT","ChATCreTdT") # mouse line
 indicator="OGB1"            : enum("OGB1","GCamp6s","GCamp6f","GCamp6m","iGluSnFr")   # indicator used in experiments
 virus_type=null             : enum("ubi","flexed")          # virus type
 target="RGC_CB"             : enum("RGC_CB", "BC_T")        # RGC/BCT/...
