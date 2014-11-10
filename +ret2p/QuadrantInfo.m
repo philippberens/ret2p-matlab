@@ -68,10 +68,11 @@ classdef QuadrantInfo < dj.Relvar & dj.AutoPopulate
             tuple = key;
             tuple.offset_x = pos(1);
             tuple.offset_y = pos(2);
-            tuple.orientation = orientation;
-            tuple.nt_pos = nt_pos;
-            tuple.dv_pos = dv_pos;
-            
+            if exist('orientation','var')
+                tuple.orientation = orientation;
+                tuple.nt_pos = nt_pos;
+                tuple.dv_pos = dv_pos;
+            end
             self.insert(tuple);
         end
     end
