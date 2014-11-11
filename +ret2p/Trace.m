@@ -124,8 +124,30 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     % sampling rate & time vector
                     [nT, ~] = size(data);
                     sr = 1/y.dx(1);
+                    if sr==1 &&  strcmp(target,'BC_T')
+                        sr = 500;
+                    elseif sr==1 &&  strcmp(target,'RGC_CB')
+                        sr = 7.8;
+                    end
                     dt = 1/sr;
                     time = (0:dt:(nT-1)*dt) + dt/2;
+                    
+                    % for BCs, adjust sampling rates and length
+                    if strcmp(target,'BC_T')
+                        if sr ~=64
+                            sr2 = 64;
+                            nT2 = ceil(sr2/sr * nT);
+                            dt2 = 1/sr2;
+                            time2 = (0:dt2:(nT2-1)*dt2) + dt2/2;
+                            data2 = zeros(nT2,size(data,2));
+                            for i=1:size(data,2)
+                                data2(:,i) = resample(data(:,i),sr2,sr);
+                            end
+                            data = data2;
+                            time = time2;
+                            sr = sr2;
+                        end
+                    end
                     
                     % remove baseline
                     baseline = median(data(1:ceil(sr),:),1);
