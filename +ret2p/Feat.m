@@ -37,7 +37,7 @@ classdef Feat < dj.Relvar
             stim = fetch1(ret2p.FeatStim(key),'feat_stim');
             
             feat_type = fetch1(ret2p.FeatTypeParams(key),'feat_type_key');
-                       
+            
             relROIs = ret2p.ROISetMember(key) & 'is_member=1';
             
             
@@ -48,18 +48,24 @@ classdef Feat < dj.Relvar
                     data = fetchn(relTrace, 'mean_trace');
                     data = cat(2,data{:});
                     
-                    relStep = ret2p.Trace & relROIs & ...
-                        ret2p.Stimulus('stim_type="Step"');
-                    qi = fetchn(relStep, 'quality');
+                    
                     
                 case 'dn'
                     relRF = ret2p.CaRF & relROIs;
                     data = fetchn(relRF, 'tc');
                     data = cat(2,data{:});
                     
-                    relStep = ret2p.Trace & relROIs & ...
-                        ret2p.Stimulus('stim_type="Step"');
-                    qi = fetchn(relStep, 'quality');
+                    
+            end
+            
+            if strcmp(key.roi_set_target,'BC_T')
+                relStep = ret2p.Trace & relROIs & ...
+                    ret2p.Stimulus('stim_type="Step"');
+                qi = fetchn(relStep, 'quality');
+            elseif strcmp(key.roi_set_target,'RGC_CB')
+                relStep = ret2p.Trace & relROIs & ...
+                    ret2p.Stimulus('stim_type="Chirp"');
+                qi = fetchn(relStep, 'quality');
             end
             
             switch feat_type
@@ -92,15 +98,15 @@ classdef Feat < dj.Relvar
                 
                 % use weight in sparse regression for depth
                 % as quality measure
-                if strcmp(key.roi_set_num,'BC_T')
+                if strcmp(key.roi_set_target,'BC_T')
                     depth = fetchn(ret2p.ROI & relROIs,'depth');
                     X = zscore(feat(:,selIdx)');
                     y = zscore(depth(selIdx));
                     [b, fitinfo] = lasso(X,y,'CV',10,'alpha',1);
                     quality = abs(b(:,fitinfo.Index1SE));
-                else 
-                    quality = NaN;
-                end               
+                else
+                    quality = nan*ones(1,size(feat,1));
+                end
                 
             end
         end

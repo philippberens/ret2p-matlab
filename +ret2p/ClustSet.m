@@ -38,12 +38,7 @@ classdef ClustSet < dj.Relvar & dj.AutoPopulate
            
             
             self.insert(key)
-            
 
-            
-            
-            
-            
         end
         
         
