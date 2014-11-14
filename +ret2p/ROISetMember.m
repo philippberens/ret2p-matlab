@@ -22,7 +22,15 @@ classdef ROISetMember < dj.Relvar & dj.AutoPopulate
     methods(Access = protected)
         function makeTuples(self, key)
             
-            restrict = fetch1(ret2p.ROISet,'restrict');
+            restrict = fetch1(ret2p.ROISet(key),'restrict');
+            target = fetch1(ret2p.ROISet(key), 'roi_set_target');
+            
+            if strcmp(restrict,'')
+                restrict = ['target="' target '"'];
+            else
+                restrict = [restrict '& target="' target '"']; 
+            end
+            
             ds_key = fetch(ret2p.Dataset(key) & restrict);
             
             if ~isempty(ds_key)

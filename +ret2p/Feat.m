@@ -1,8 +1,8 @@
 %{
-ret2p.FeatSet (imported) # Features for clustering and other things
+ret2p.Feat (imported) # Features for clustering and other things
 
--> ret2p.ROISet
--> ret2p.FeatSetParams
+-> ret2p.FeatType
+-> ret2p.FeatStim
 ---
 
 feat            : longblob  # feature value
@@ -12,14 +12,14 @@ quality=null    : longblob  # some measure of feature quality
 
 %}
 
-classdef FeatSet < dj.Relvar & dj.AutoPopulate
+classdef Feat < dj.Relvar
     properties(Constant)
-        table = dj.Table('ret2p.FeatSet');
-        popRel = ret2p.ROISet * ret2p.FeatSetParams;
+        table = dj.Table('ret2p.Feat');
+        %         popRel = ret2p.ROISet * ret2p.FeatSetParams;
     end
     
     methods
-        function self = FeatSet(varargin)
+        function self = Feat(varargin)
             self.restrict(varargin{:})
         end
         
@@ -30,16 +30,14 @@ classdef FeatSet < dj.Relvar & dj.AutoPopulate
                 self.restrict(filter);
             end
             T = fetch(self,'*');
-            
         end
-    end
-    
-    methods(Access = protected)
+        
         function makeTuples(self, key)
             
-            [stim, param_key] = fetch1(ret2p.FeatSetParams(key),'stim','param_key');
+            stim = fetch1(ret2p.FeatStim(key),'feat_stim');
             
-            
+            feat_type = fetch1(ret2p.FeatTypeParams(key),'feat_type_key');
+                       
             relROIs = ret2p.ROISetMember(key) & 'is_member=1';
             
             
@@ -54,23 +52,24 @@ classdef FeatSet < dj.Relvar & dj.AutoPopulate
                         ret2p.Stimulus('stim_type="Step"');
                     qi = fetchn(relStep, 'quality');
                     
-                case 'rf'
+                case 'dn'
                     relRF = ret2p.CaRF & relROIs;
                     data = fetchn(relRF, 'tc');
+                    data = cat(2,data{:});
                     
                     relStep = ret2p.Trace & relROIs & ...
                         ret2p.Stimulus('stim_type="Step"');
                     qi = fetchn(relStep, 'quality');
             end
             
-            switch param_key
-                case 'bc_pca'
-                    [feat, basis, quality] = feat_bc_pca;
+            switch feat_type
+                case 'pca'
+                    [feat, basis, quality] = feat_pca;
                     
                 otherwise
                     error('not implemented yet')
             end
-
+            
             % fill tuple
             tuple = key;
             
@@ -83,23 +82,25 @@ classdef FeatSet < dj.Relvar & dj.AutoPopulate
             self.insert(tuple);
             
             % functions for computing features
-            function [feat, basis, quality] = feat_bc_pca
+            function [feat, basis, quality] = feat_pca
                 
                 selIdx = qi>.3;
                 coeff = princomp(data(:,selIdx)');
                 basis = coeff(:,1:20);
                 
                 feat = basis' * data;
-
-                % use weight in sparse regression for depth 
+                
+                % use weight in sparse regression for depth
                 % as quality measure
-                depth = fetchn(ret2p.ROI & relROIs,'depth');
-                X = zscore(feat(:,selIdx)');
-                y = zscore(depth(selIdx));
-                [b, fitinfo] = lasso(X,y,'CV',10,'alpha',1);
-                quality = abs(b(:,fitinfo.Index1SE));
-                
-                
+                if strcmp(key.roi_set_num,'BC_T')
+                    depth = fetchn(ret2p.ROI & relROIs,'depth');
+                    X = zscore(feat(:,selIdx)');
+                    y = zscore(depth(selIdx));
+                    [b, fitinfo] = lasso(X,y,'CV',10,'alpha',1);
+                    quality = abs(b(:,fitinfo.Index1SE));
+                else 
+                    quality = NaN;
+                end               
                 
             end
         end

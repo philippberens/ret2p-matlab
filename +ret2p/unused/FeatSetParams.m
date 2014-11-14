@@ -1,10 +1,10 @@
 %{
 ret2p.FeatSetParams (manual) # List of parameter sets for caRF
 
-param_set_num   : tinyint unsigned  # number of parameter set
+feat_set_num    : tinyint unsigned  # number of parameter set
 stim            : enum("Chirp","RF","Step","DS","BG")    # which traces
 ---
-param_key       : enum("bc_pca")   # key for parameter set
+feat_key       : enum("bc_pca")   # key for parameter set
 %}
 
 classdef FeatSetParams < dj.Relvar
