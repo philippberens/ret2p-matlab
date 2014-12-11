@@ -117,7 +117,7 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     
                     qi = f(trace_by_trial);
                     
-                case 'chirp'
+                case {'chirp','localchirp'}
                     % get data for roi i
                     data = y.y(:,:,key.roi_num);
                     
@@ -165,7 +165,7 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     dt_trace = gradient(mean_trace);
                     trace_by_trial = data;
                     
-                case 'dn'
+                case {'dn', 'ringflicker'}
                     % get data for cell i
                     data = y.y(:,key.roi_num);
                     
@@ -213,6 +213,8 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     mean_trace = mean_trace/scale;
                     dt_trace = gradient(mean_trace);
                     trace_by_trial = data;
+                    
+             
                     
             end
             

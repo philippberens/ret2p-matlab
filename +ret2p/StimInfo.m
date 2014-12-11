@@ -57,7 +57,7 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
                     sr = 500;
                     time = 0:1/sr:(length(s)-1)*1/sr;
                     
-                case 'chirp'
+                case {'chirp','localchirp'}
                     % for all other stimuli, time and sr are available
                     s = y.y;
                     sr = 1/y.dx;
@@ -76,6 +76,23 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
                     s = y.y;
                     sr = 1/y.dx;
                     time = 0:y.dx:(length(s)-1)*y.dx; 
+                    
+                case 'ringflicker'
+                    idx = strfind(file,'\');
+                    path = getLocalPath(file(1:idx(end)));
+                    dl = dir(path);
+                    idx = strncmp('RingFlicker_Stimulus',{dl.name},15);
+                    dl = dl(idx);
+                    
+                    y = IBWread([path dl(1).name]);
+                    s = zeros(size(y.y,1),length(dl));
+                    for i=1:length(dl)
+                        y = IBWread([path dl(i).name]);
+                        s(:,i) = y.y;                        
+                    end
+                    
+                    sr = 1000/y.dx;
+                    time = 0:y.dx:(size(s,1)-1)*y.dx; 
             end
             
             % fill tuple
