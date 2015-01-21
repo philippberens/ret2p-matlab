@@ -71,7 +71,8 @@ classdef Feat < dj.Relvar
             switch feat_type
                 case 'pca'
                     [feat, basis, quality] = feat_pca;
-                    
+                case 'spca'
+                    [feat, basis, quality] = feat_spca;
                 otherwise
                     error('not implemented yet')
             end
@@ -108,6 +109,45 @@ classdef Feat < dj.Relvar
                     quality = nan*ones(1,size(feat,1));
                 end
                 
+            end
+            
+            function [feat, basis, quality] = feat_spca
+                
+                addpath('Z:\lab\libraries\matlablib\spasm\')
+                
+                selIdx = qi>.3;
+                
+                
+                
+                switch lower(stim)
+                    case 'chirp'
+                        nNonZero = 50;
+                        nComp = 20;
+                    case 'step'
+                        nNonZero = 20;
+                        nComp = 20;
+                    case 'dn'
+                        nNonZero = 10;
+                        nComp = 20;
+                end
+                
+                basis = spca(data(:,selIdx)',[],nComp,inf,-nNonZero);
+                
+                feat = basis' * data;
+                
+                % use weight in sparse regression for depth
+                % as quality measure
+                if false
+                    depth = fetchn(ret2p.ROI & relROIs,'depth');
+                    X = zscore(feat(:,selIdx)');
+                    y = zscore(depth(selIdx));
+                    [b, fitinfo] = lasso(X,y,'CV',10,'alpha',1);
+                    quality = abs(b(:,fitinfo.Index1SE));
+                else
+                    quality = nan*ones(1,size(feat,1));
+                end
+                
+                rmpath('Z:\lab\libraries\matlablib\spasm\')
             end
         end
     end

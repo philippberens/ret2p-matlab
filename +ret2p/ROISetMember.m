@@ -24,27 +24,28 @@ classdef ROISetMember < dj.Relvar & dj.AutoPopulate
             
             restrict = fetch1(ret2p.ROISet(key),'restrict');
             target = fetch1(ret2p.ROISet(key), 'roi_set_target');
+            start_date = fetch1(ret2p.ROISet(key), 'roi_set_start_date');
+            stop_date = fetch1(ret2p.ROISet(key), 'roi_set_stop_date');
             
-            if strcmp(restrict,'')
-                restrict = ['target="' target '"'];
-            else
-                restrict = [restrict '& target="' target '"']; 
-            end
+            filter = ['target="' target '" and date>="' ...
+                start_date '" and date <"' stop_date '"'];
             
-            ds_key = fetch(ret2p.Dataset(key) & restrict);
+            rel = (ret2p.Dataset * ret2p.Quadrant(key) & filter);
+            
+            ds_key = fetch(rel - restrict);
             
             if ~isempty(ds_key)
                 is_member = true;
-            else 
+            else
                 is_member = false;
             end
-                
+            
             
             
             % fill tuple
             tuple = key;
             tuple.is_member = is_member;
-          
+            
             self.insert(tuple);
         end
     end

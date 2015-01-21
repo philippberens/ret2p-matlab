@@ -1,9 +1,9 @@
 %{
 ret2p.FeatTypeParams (manual) # List of parameter sets for caRF
 
-feat_type_num    : tinyint unsigned  # number of parameter set
+feat_type_num   : tinyint unsigned      # number of parameter set
 ---
-feat_type_key    : enum("pca")   # key for parameter set
+feat_type_key               : enum('pca','spca')            # key for parameter set
 %}
 
 classdef FeatTypeParams < dj.Relvar
