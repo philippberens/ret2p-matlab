@@ -20,6 +20,7 @@ f               : longblob # frequencies
 t               : longblob # times
 loc_power       : longblob # power estimate
 glo_power       : longblob # power estimate
+loc_glo_corr    : float     # correlation between global and local
 
 %}
 
@@ -44,31 +45,7 @@ classdef LocalGlobalChirp < dj.Relvar & dj.AutoPopulate
             f = Figure(1, 'size', [100 50]);
             
             for t = 1:length(T)
-                time = T(t).time;
-                
-                % plot receptive field
-                subplot(1,3,1)
-                map = T(t).map;
-                imagesc(T(t).y,T(t).x,map')
-                colormap gray
-                hold on
-                if T(t).quality<0.8
-                    h = plotGauss(flipud(T(t).m),diag(flipud(T(t).s.^2)),1,'r');
-                    set(h,'color','r')
-                    plot(T(t).m(2),T(t).m(1),'r+')
-                end
-                formatSubplot(gca,'xl','microns', ...
-                    'yl','microns','ax','normal', ...
-                    'DataAspectRatio',[1.3 1 1])
-                set(gca,'PlotBoxAspectRatio',[400 300 1])
-                
-                
-                
-                
-                f.cleanup();
-                pause
-                clf
-                
+
             end
             
         end
@@ -137,6 +114,7 @@ classdef LocalGlobalChirp < dj.Relvar & dj.AutoPopulate
             tuple.glo_spectrogram = gloS;
             tuple.loc_power = locPower;
             tuple.glo_power = gloPower;
+            tuple.loc_glo_corr = corr(localChirp,globalChirp);
                        
             self.insert(tuple);
         end

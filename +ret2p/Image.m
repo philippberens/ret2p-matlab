@@ -1,17 +1,19 @@
 %{
 ret2p.Image (imported) # Structural image and ROIs
 
--> ret2p.Scans
+-> ret2p.Quadrant
 ---
-image           : longblob          # structural image
+image=null      : longblob          # structural image
 roi             : longblob          # roi image
+pixel_length    : float             # size of pixel
+pixel_area      : float             # area of pixel
         
 %}
 
 classdef Image < dj.Relvar & dj.AutoPopulate
     properties(Constant)
         table = dj.Table('ret2p.Image');
-        popRel = ret2p.Scans;
+        popRel = ret2p.Quadrant;
     end
     
     methods
@@ -53,18 +55,30 @@ classdef Image < dj.Relvar & dj.AutoPopulate
         function makeTuples(self, key)
             
             % get path information & read file
-            path = fetch1(ret2p.Datasets(key),'path');
-            folder = fetch1(ret2p.Scans(key),'folder');
+            path = fetch1(ret2p.Dataset(key),'path');
+            folder = fetch1(ret2p.Quadrant(key),'folder');
             
             tuple = key;
             
-            y = IBWread(getLocalPath(fullfile(path,folder,'image.ibw')));
-            tuple.image = y.y;
+            file = getLocalPath(fullfile(path,folder,'image.ibw'));
+            if exist(file,'file')
+                y = IBWread(file);
+                tuple.image = y.y;
+            end
             
-            y = IBWread(getLocalPath(fullfile(path,folder,'Roi.ibw')));
-            tuple.roi = y.y;
-            tuple.roi(tuple.roi==1)=0;
-            tuple.roi = abs(tuple.roi);
+            file = getLocalPath(fullfile(path,folder,'Roi.ibw'));
+            if exist(file,'file')
+                y = IBWread(file);
+                tuple.roi = y.y;
+                tuple.roi(tuple.roi==1)=0;
+                tuple.roi = abs(tuple.roi);
+            end
+            
+            file = getLocalPath(fullfile(path,folder,'Cells.ibw'));
+            y = IBWread(file);
+            tuple.pixel_length = y.y(1,6);
+            tuple.pixel_area = tuple.pixel_length^2;
+            
             
             self.insert(tuple);
         end

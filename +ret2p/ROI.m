@@ -60,7 +60,7 @@ classdef ROI < dj.Relvar & dj.AutoPopulate
                     
                     area2d = zeros(size(y.y,1),1);
                     for i=1:size(y.y,1)
-                        area2d(i) = sum(rois(:)==-i)*y.y(1,6);
+                        area2d(i) = sum(rois(:)==-i)*y.y(1,6)^2;
                     end
                     
             end

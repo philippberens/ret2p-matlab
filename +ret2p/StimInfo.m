@@ -26,12 +26,18 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
         function makeTuples(self, key)
             
             % get path information & read file
-            file = fetch1(ret2p.Stimulus(key),'stim_file');
+            stimType = lower(fetch1(ret2p.Stimulus(key),'stim_type'));
+            if ~strcmp(stimType,'ringflicker')
+                file = fetch1(ret2p.Stimulus(key),'stim_file');
+                y = IBWread(getLocalPath(file));
+            else
+                file = fetch1(ret2p.Stimulus(key),'stim_file');
+                y = [];
+            end
             
-            y = IBWread(getLocalPath(file));
-
+            
             % process stimulus
-            switch lower(fetch1(ret2p.Stimulus(key),'stim_type'))
+            switch stimType
                 case {'ds','ds50'} % not checked yet!
                     % for DS stimulus, each entry corresponds to 1 trial
                     s = y.y;
@@ -81,7 +87,8 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
                     idx = strfind(file,'\');
                     path = getLocalPath(file(1:idx(end)));
                     dl = dir(path);
-                    idx = strncmp('RingFlicker_Stimulus',{dl.name},15);
+                    idx = strncmp('RingFlicker_Stimulus',{dl.name},17);
+                    
                     dl = dl(idx);
                     
                     y = IBWread([path dl(1).name]);
@@ -92,7 +99,10 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
                     end
                     
                     sr = 1000/y.dx;
-                    time = 0:y.dx:(size(s,1)-1)*y.dx; 
+                    time = 0:y.dx:(size(s,1)-1)*y.dx;
+
+                    y = IBWread([path 'RingFlicker_Stim_Timing.ibw']);
+                    time = (time + y.y(1))/1000;
             end
             
             % fill tuple
