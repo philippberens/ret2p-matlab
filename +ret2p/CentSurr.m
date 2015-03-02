@@ -174,8 +174,11 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
                 rf(i,:) = imfilter(rf_raw(i,:),w);   % smooth for fitting
             end
             
-            center = mean(rf(1:2,:));
-            surround = mean(rf(4:end,:));
+            s = std(rf,[],2);
+            [~,idx] = max(s);
+            center = mean(rf(idx,:));
+
+            surround = mean(rf(min(idx+(3:5),10),:));
             
             
         end
