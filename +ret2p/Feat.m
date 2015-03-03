@@ -42,7 +42,7 @@ classdef Feat < dj.Relvar
             
             
             switch lower(stim)
-                case {'step','chirp','bg'}
+                case {'step','chirp','bg','localchirp'}
                     relTrace = ret2p.Trace & relROIs & ...
                         ret2p.Stimulus(sprintf('stim_type="%s"',stim));
                     data = fetchn(relTrace, 'mean_trace');
@@ -120,7 +120,7 @@ classdef Feat < dj.Relvar
                 
                 
                 switch lower(stim)
-                    case 'chirp'
+                    case {'chirp','localchirp'}
                         nNonZero = 50;
                         nComp = 20;
                     case 'step'

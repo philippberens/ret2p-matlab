@@ -14,7 +14,7 @@ classdef FeatType < dj.Relvar & dj.AutoPopulate
     end
     
     methods
-        function self = FeatTyper(varargin)
+        function self = FeatType(varargin)
             self.restrict(varargin{:})
         end
         
@@ -34,15 +34,16 @@ classdef FeatType < dj.Relvar & dj.AutoPopulate
             
             self.insert(key)
             
-            stims = fetchn(ret2p.Stimulus & ret2p.ROISetMember(key),'stim_type');
+            key.is_member=1;
+            stims = fetchn(ret2p.ROI * ret2p.Stimulus & ret2p.ROISetMember(key),'stim_type');
             uStims = unique(stims);
             
-            quads = fetch(ret2p.Quadrant & ret2p.ROISetMember(key));
+            quads = fetch(ret2p.ROI & ret2p.ROISetMember(key));
             nQ = length(quads);
             
             for i=1:length(uStims)
                 if sum(strcmp(uStims{i},stims))== nQ
-                    newKey = key;
+                    newKey = rmfield(key,'is_member');
                     stim_num = fetch1(ret2p.FeatStim & ...
                         sprintf('feat_stim="%s"', uStims{i}),'feat_stim_num');
                     newKey.feat_stim_num=stim_num;

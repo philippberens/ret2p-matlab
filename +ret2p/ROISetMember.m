@@ -32,7 +32,11 @@ classdef ROISetMember < dj.Relvar & dj.AutoPopulate
             
             rel = (ret2p.Dataset * ret2p.Quadrant(key) & filter);
             
-            ds_key = fetch(rel - restrict);
+            if ~isempty(restrict)
+                ds_key = fetch(rel & eval(restrict));
+            else
+                ds_key = fetch(rel);
+            end
             
             if ~isempty(ds_key)
                 is_member = true;
