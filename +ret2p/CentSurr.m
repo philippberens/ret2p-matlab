@@ -176,9 +176,9 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             
             s = std(rf,[],2);
             [~,idx] = max(s);
-            center = mean(rf(idx,:));
+            center = rf(idx,:);
 
-            surround = mean(rf(min(idx+(3:5),10),:));
+            surround = mean(rf(min(idx+(3:5),size(rf,1)),:));
             
             
         end
