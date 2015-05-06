@@ -11,6 +11,7 @@ cs_delay    : float     # timing difference center - surround
 cs_ratio    : float     # center surround sd ratio
 center      : longblob  # center time course
 surround    : longblob  # surround time course
+profiles    : longblob  # profiles
 
 %}
 
@@ -28,6 +29,51 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
         
         
         function plot(self)
+            key = fetch(self);
+            
+            f = Figure(1,'size',[100 120]);
+
+            
+            for i=1:length(key)
+                [rf, center, surround, profiles, time, cs_delay, cs_ratio] = ...
+                        fetch1(ret2p.CentSurr(key(i)),'rf', 'center', 'surround', ...
+                            'profiles', 'time', 'cs_delay', 'cs_ratio');
+                
+                subplot(311)
+                imagesc(time,1:size(rf,1),rf)
+                xlabel('Time (s)')
+                ylabel('Position')
+
+                s = std(rf,[],2);
+                [~,idx] = max(s(1:4));
+                hold on
+                plot(time(5), idx, '.k')
+
+                plot(time(5), idx+2, '.k')
+                plot(time(5),idx+3, '.k')
+                plot(time(5),idx+4, '.k')
+
+                subplot(312)
+                plot(time,center), hold on
+                plot(time,surround)
+                line([time(1) time(end)],[0 0],'linestyle','--','color','k')
+                xlabel('Time (s)')
+                legend('Center','Surround')
+                yl = ylim;
+                text(.8*time(end),yl(1)+(yl(2)-yl(1))/5, ...
+                    sprintf('ratio = %.2f\ndelay = %.2f', cs_ratio, cs_delay))
+                
+                subplot(313)
+                plot(profiles')
+                line([0 10],[0 0],'linestyle','--','color','k')
+                xlabel('Ring #')
+                legend('Center','Surround')
+                
+
+                f.cleanup()
+                pause
+                clf
+            end
             
             
             
@@ -41,10 +87,10 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             param_key = fetch1(ret2p.CentSurrParams(key),'param_key');
             switch param_key
                 case 'der_sta'
-                    [rf, center, surround, time] = rf_der_sta(ret2p.CentSurr,key);
+                    [rf, center, surround, profiles, time] = rf_der_sta(ret2p.CentSurr,key);
                     
                 case 'der_nmm'
-                    [rf, center, surround, time] = rf_der_nmm(ret2p.CentSurr,key);
+                    [rf, center, surround, profiles, time] = rf_der_nmm(ret2p.CentSurr,key);
                     
                 otherwise
                     error('not simplemented yet')
@@ -63,7 +109,7 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             tuple.surround = surround;
             tuple.cs_delay = cs_delay;
             tuple.cs_ratio = cs_ratio;
-            tuplep.profiles = profiles;
+            tuple.profiles = profiles;
             
             
             self.insert(tuple);
@@ -132,6 +178,8 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             center = rf(idx,:);
             
             surround = mean(rf(min(idx+(3:5),size(rf,1)),:));
+            
+             profiles = [center*rf'; surround*rf'];
             
             
         end
