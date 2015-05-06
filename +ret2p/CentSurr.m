@@ -27,61 +27,10 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
         end
         
         
-        function plot(self,filter)
+        function plot(self)
             
-            if nargin > 1
-                self.restrict(filter);
-            end
-            T = fetch(self,'*');
-            f = Figure(1, 'size', [100 50]);
             
-            for t = 1:length(T)
-                time = T(t).time;
-                
-                % plot receptive field
-                subplot(1,3,1)
-                map = T(t).map;
-                imagesc(T(t).y,T(t).x,map')
-                colormap gray
-                hold on
-                if T(t).quality<0.8
-                    h = plotGauss(flipud(T(t).m),diag(flipud(T(t).s.^2)),1,'r');
-                    set(h,'color','r')
-                    plot(T(t).m(2),T(t).m(1),'r+')
-                end
-                formatSubplot(gca,'xl','microns', ...
-                    'yl','microns','ax','normal', ...
-                    'DataAspectRatio',[1.3 1 1])
-                set(gca,'PlotBoxAspectRatio',[400 300 1])
-                
-                
-                % plot time course
-                subplot(1,3,2)
-                plot(time,T(t).tc,'k'), hold on
-                line([time(end) time(1)],[0 0],'color',[0.7 0.7 0.7])
-                formatSubplot(gca,'xl','Time from stimulus onset (s)', ...
-                    'yl','Response ','lim',[time(end) time(1) ...
-                    -.7 .7],'ax','normal')
-                set(gca,'PlotBoxAspectRatio',[400 300 1])
-                
-                % plot surround
-                subplot(1,3,3)
-                [xx, yy] = meshgrid(T(t).x,T(t).y);
-                xx = [xx(:) yy(:)];
-                d = pdist2(xx,T(t).m','mahalanobis',diag(T(t).s.^2));
-                plot(d,T(t).map(:),'k.','markersize',1)
-                hold on
-                plot(T(t).rad_bins,T(t).rad,'r')
-                formatSubplot(gca,'xl','Distance from center (s.d.)', ...
-                    'yl','RF Amplitude','lim',[0 T(t).rad_bins(end) ...
-                    0 .6],'ax','normal')
-                set(gca,'PlotBoxAspectRatio',[400 300 1])
-                
-                f.cleanup();
-                pause
-                clf
-                
-            end
+            
             
         end
     end
@@ -94,6 +43,9 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
                 case 'der_sta'
                     [rf, center, surround, time] = rf_der_sta(ret2p.CentSurr,key);
                     
+                case 'der_nmm'
+                    [rf, center, surround, time] = rf_der_nmm(ret2p.CentSurr,key);
+                    
                 otherwise
                     error('not simplemented yet')
             end
@@ -102,7 +54,7 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             [~,idx1] = max(abs(center));
             [~,idx2] = max(abs(surround));
             cs_delay =  time(idx1) - time(idx2);
-                        
+            
             %% fill tuple
             tuple = key;
             tuple.rf = rf;
@@ -111,12 +63,13 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             tuple.surround = surround;
             tuple.cs_delay = cs_delay;
             tuple.cs_ratio = cs_ratio;
-
+            tuplep.profiles = profiles;
+            
             
             self.insert(tuple);
         end
         
-        function [rf, center, surround, time] = rf_der_sta(~,key)
+        function [rf, center, surround, profiles, time] = rf_der_sta(~,key)
             
             % implements simple rf mapping via thresholding
             
@@ -133,7 +86,7 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             % get stimulus
             [stim, s_time] = fetch1(ret2p.StimInfo(key) & ...
                 ret2p.Stimulus('stim_type="RingFlicker"'),'stim','time');
-           
+            
             stim = stim-mean(stim(:));
             stim = stim';
             dt = diff(s_time(1:2));
@@ -177,8 +130,82 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             s = std(rf,[],2);
             [~,idx] = max(s);
             center = rf(idx,:);
-
+            
             surround = mean(rf(min(idx+(3:5),size(rf,1)),:));
+            
+            
+        end
+        
+        function [rf, center, surround, profiles, time] = rf_der_nmm(~,key)
+            
+            % implements rf mapping via optimizing model using NMM toolbox
+            % by Dan Butts and Co
+            
+            addpath(getLocalPath('/lab/libraries/NIMtoolbox/'))
+            addpath(getLocalPath('/lab/libraries/NMM/'))
+            addpath(getLocalPath('/lab/libraries/minFunc_2012/minFunc/'))
+            addpath(getLocalPath('/lab/libraries/minConf/minConf/'))
+            addpath(getLocalPath('/lab/libraries/minConf/minFunc/'))
+            addpath(genpath(getLocalPath('/lab/libraries/L1General/')))
+            
+            % get  trace
+            [dtrace, ~] = fetch1(ret2p.Trace(key) & ...
+                ret2p.Stimulus('stim_type="RingFlicker"'),'dt_trace','time');
+            
+            ds = 5; % downsample factor
+            
+            % process trace
+            dtrace = dtrace - nanmean(dtrace);
+            sd = nanmedian(abs(dtrace))/0.6745;
+            zs = dtrace/sd;
+            trace = decimate(zs,ds);
+          
+            % process stimulus
+            [stim, s_time] = fetch1(ret2p.StimInfo(key) & ...
+                ret2p.Stimulus('stim_type="RingFlicker"'),'stim','time');
+            
+            stim = stim-mean(stim(:));
+            [NT,nFreq] = size(stim);
+            dt = diff(s_time(1:2))*ds;
+            
+            Xstim = zeros(ceil(NT/ds),nFreq);
+            for i=1:nFreq
+                Xstim(:,i) = decimate(stim(:,i),ds);
+            end
+            
+            nLags = 50; % number of time lags for estimating stimulus filters
+            tent_basis_spacing = 1; % represent stimulus filters using tent-bases with this spacing (in up-sampled time units)
+            stim_dt = 1;
+            up_samp_fac = 1;
+            params_stim = NMMcreate_stim_params([nLags nFreq], stim_dt, up_samp_fac, tent_basis_spacing );
+            
+            Xstim = create_time_embedding(Xstim, params_stim);
+            
+            % fit a (regularized) GLM
+            
+            params_reg = NMMcreate_reg_params( 'lambda_d2X',50,'lambda_d2T',200);
+            fit0 = NMMinitialize_model( params_stim, 1, {'lin'}, params_reg, 1, [], 'linear' );
+            fit0 = NMMfit_filters( fit0, trace, Xstim, [],[], 1);
+            
+            
+            rf = reshape(fit0.mods.filtK,[nLags nFreq])';
+            
+            s = std(rf,[],2);
+            [~,idx] = max(s(1:4));
+            center = rf(idx,:);
+            
+            surround = mean(rf(min(idx+(2:4),size(rf,1)),:));
+            
+            profiles = [center*rf'; surround*rf'];
+            
+            time = (0:dt:(nLags-1)*dt) + dt/2;
+            
+            rmpath(getLocalPath('/lab/libraries/NIMtoolbox/'))
+            rmpath(getLocalPath('/lab/libraries/NMM/'))
+            rmpath(getLocalPath('/lab/libraries/minFunc_2012/minFunc/'))
+            rmpath(getLocalPath('/lab/libraries/minConf/minConf/'))
+            rmpath(getLocalPath('/lab/libraries/minConf/minFunc/'))
+            rmpath(genpath(getLocalPath('/lab/libraries/L1General/')))
             
             
         end

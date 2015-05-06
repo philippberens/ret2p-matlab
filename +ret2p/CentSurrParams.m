@@ -1,9 +1,9 @@
 %{
 ret2p.CentSurrParams (manual) # List of parameter sets for center surround
 
-param_set_num   : tinyint unsigned  # number of parameter set
+param_set_num   : tinyint unsigned       # number of parameter set
 ---
-param_key       : enum("der_sta")   # key for parameter set
+param_key                   : enum('der_sta','der_nmm')     # key for parameter set
 %}
 
 classdef CentSurrParams < dj.Relvar
