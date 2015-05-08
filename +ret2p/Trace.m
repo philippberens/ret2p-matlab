@@ -2,7 +2,7 @@
 ret2p.Trace (imported) # Trace/display for each stimulus
 
 -> ret2p.ROI
--> ret2p.Stimulus
+-> ret2p.DrugTreatment
 ---
 sampling_rate       : float                 # sampling rate in Hz
 quality=NULL        : float                 # quality index

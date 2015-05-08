@@ -12,6 +12,8 @@ cs_ratio    : float     # center surround sd ratio
 center      : longblob  # center time course
 surround    : longblob  # surround time course
 profiles    : longblob  # profiles
+lin_sep    : float      # linear separability index
+
 
 %}
 
@@ -35,9 +37,9 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
 
             
             for i=1:length(key)
-                [rf, center, surround, profiles, time, cs_delay, cs_ratio] = ...
+                [rf, center, surround, profiles, time, cs_delay, cs_ratio, lin_sep] = ...
                         fetch1(ret2p.CentSurr(key(i)),'rf', 'center', 'surround', ...
-                            'profiles', 'time', 'cs_delay', 'cs_ratio');
+                            'profiles', 'time', 'cs_delay', 'cs_ratio', 'lin_sep');
                 
                 subplot(311)
                 imagesc(time,1:size(rf,1),rf)
@@ -60,8 +62,8 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
                 xlabel('Time (s)')
                 legend('Center','Surround')
                 yl = ylim;
-                text(.8*time(end),yl(1)+(yl(2)-yl(1))/5, ...
-                    sprintf('ratio = %.2f\ndelay = %.2f', cs_ratio, cs_delay))
+                text(.8*time(end),yl(1)+(yl(2)-yl(1))/4, ...
+                    sprintf('ratio = %.2f\ndelay = %.2f\nlin sep = %.2f', cs_ratio, cs_delay, lin_sep))
                 
                 subplot(313)
                 plot(profiles')
@@ -100,6 +102,10 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             [~,idx1] = max(abs(center));
             [~,idx2] = max(abs(surround));
             cs_delay =  time(idx1) - time(idx2);
+            [~, S, ~] = svd(rf);
+            S = diag(S);
+            lin_sep = S(1)/S(2);
+            
             
             %% fill tuple
             tuple = key;
@@ -110,6 +116,7 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             tuple.cs_delay = cs_delay;
             tuple.cs_ratio = cs_ratio;
             tuple.profiles = profiles;
+            tuple.lin_sep = lin_sep;
             
             
             self.insert(tuple);
@@ -234,7 +241,6 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             params_reg = NMMcreate_reg_params( 'lambda_d2X',50,'lambda_d2T',200);
             fit0 = NMMinitialize_model( params_stim, 1, {'lin'}, params_reg, 1, [], 'linear' );
             fit0 = NMMfit_filters( fit0, trace, Xstim, [],[], 1);
-            
             
             rf = reshape(fit0.mods.filtK,[nLags nFreq])';
             

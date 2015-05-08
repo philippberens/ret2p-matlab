@@ -1,9 +1,8 @@
 %{
-ret2p.CaRFp (manual) # List of parameter sets for caRF
-
-param_set_num   : tinyint unsigned  # number of parameter set
+ret2p.CaRFp (manual) # List of parameter sets for caRF$
+param_set_num   : tinyint unsigned       # number of parameter set
 ---
-param_key       : enum("der_sta")   # key for parameter set
+param_key                   : enum('der_sta','der_nmm')     # key for parameter set
 %}
 
 classdef CaRFp < dj.Relvar

@@ -24,7 +24,7 @@ rad         : longblob  # radial bin amplitude
 classdef CaRF < dj.Relvar & dj.AutoPopulate
     properties(Constant)
         table = dj.Table('ret2p.CaRF');
-        popRel = ret2p.CaRFp * (ret2p.Trace & ret2p.Stimulus('stim_type="DN"'));
+        popRel = (ret2p.CaRFp * ret2p.Trace) & ret2p.Stimulus('stim_type="DN"');
     end
     
     methods
@@ -33,63 +33,49 @@ classdef CaRF < dj.Relvar & dj.AutoPopulate
         end
         
         
-        function plot(self,filter)
+        function plot(self)
             
-            if nargin > 1
-                self.restrict(filter);
-            end
-            T = fetch(self,'*');
-            f = Figure(1, 'size', [100 50]);
+            key = fetch(self);
             
-            for t = 1:length(T)
-                time = T(t).time;
+            f = Figure(1,'size',[80 60]);
+            
+            
+            for i=1:length(key)
+                key(i)
+                [~, tc, map, time, x, y] = ...
+                    fetch1(ret2p.CaRF(key(i)),'rf', 'tc', 'map', ...
+                    'time', 'x', 'y');
                 
-                % plot receptive field
-                subplot(1,3,1)
-                map = T(t).map;
-                imagesc(T(t).y,T(t).x,map')
-                colormap gray
+                subplot(211)
+                imagesc(y,x,map)
                 hold on
-                if T(t).quality<0.8
-                    h = plotGauss(flipud(T(t).m),diag(flipud(T(t).s.^2)),1,'r');
+                if fetch1(ret2p.CaRF(key(i)),'quality')<.8
+                    [m, s] = fetch1(ret2p.CaRF(key(i)),'m','s');
+                    h = plotGauss(m,diag(s.^2),1,'r');
                     set(h,'color','r')
-                    plot(T(t).m(2),T(t).m(1),'r+')
+                    h = plotGauss(m,diag(s.^2),2,'r');
+                    set(h,'color','r','linestyle','--')
+                    plot(m(1),m(2),'r+')
                 end
-                formatSubplot(gca,'xl','microns', ...
-                    'yl','microns','ax','normal', ...
-                    'DataAspectRatio',[1.3 1 1])
+                xlabel('\mu m')
+                ylabel('\mu m')
+                set(gca,'DataAspectRatio',[1.3 1 1])
                 set(gca,'PlotBoxAspectRatio',[400 300 1])
                 
-                
-                % plot time course
-                subplot(1,3,2)
-                plot(time,T(t).tc,'k'), hold on
-                line([time(end) time(1)],[0 0],'color',[0.7 0.7 0.7])
-                formatSubplot(gca,'xl','Time from stimulus onset (s)', ...
-                    'yl','Response ','lim',[time(end) time(1) ...
-                    -.7 .7],'ax','normal')
-                set(gca,'PlotBoxAspectRatio',[400 300 1])
-                
-                % plot surround
-                subplot(1,3,3)
-                [xx, yy] = meshgrid(T(t).x,T(t).y);
-                xx = [xx(:) yy(:)];
-                d = pdist2(xx,T(t).m','mahalanobis',diag(T(t).s.^2));
-                plot(d,T(t).map(:),'k.','markersize',1)
-                hold on
-                plot(T(t).rad_bins,T(t).rad,'r')
-                formatSubplot(gca,'xl','Distance from center (s.d.)', ...
-                    'yl','RF Amplitude','lim',[0 T(t).rad_bins(end) ...
-                    0 .6],'ax','normal')
-                set(gca,'PlotBoxAspectRatio',[400 300 1])
+                subplot(212)
+                plot(time,tc)
+                xlabel('Time (s)')
+                set(gca,'ytick',[])
                 
                 f.cleanup();
                 pause
-                clf
+                
                 
             end
             
         end
+        
+        
     end
     
     methods(Access = protected)
@@ -100,11 +86,17 @@ classdef CaRF < dj.Relvar & dj.AutoPopulate
                 case 'der_sta'
                     [rf, map, tc, time] = rf_der_sta(ret2p.CaRF,key);
                     
+                case 'der_nmm'
+                    [rf, map, tc, time] = rf_der_nmm(ret2p.CaRF,key);
+                    
+                    
                 otherwise
                     error('not implemented yet')
             end
             
-
+            [nX, nY, nT] = size(rf);
+            
+            
             %% fit rf with gauss
             dmu = fetch1(ret2p.StimInfo(key),'spatial_sz');
             [xo, yo] = fetchn(ret2p.QuadrantInfo(key),'offset_x','offset_y');
@@ -148,13 +140,13 @@ classdef CaRF < dj.Relvar & dj.AutoPopulate
             % time course in rf (8 closest pixels to center averaged)
             d = pdist2(xx,m','mahalanobis',diag(s.^2));
             [dd, dnx] = sort(d,'ascend');
-            foo = reshape(rf,300,80);
+            foo = reshape(rf,nX*nY,nT);
             w = exp(-dd(1:8)); w = w/sum(w(:));
             tc2 = w'*foo(dnx(1:8),:);
             
             % radial rf shape
             rad1 = map(:);
-            bins = 0:.25:10;
+            bins = 0:.2:8;
             [~, binIdx] = histc(d,bins);
             rad = zeros(size(bins));
             for i=1:length(bins)
@@ -195,7 +187,7 @@ classdef CaRF < dj.Relvar & dj.AutoPopulate
             switch fetch1(ret2p.Dataset(key),'target')
                 case 'BC_T'
                     [dtrace, t_time] = fetch1(ret2p.Trace(key) & ...
-                        ret2p.Stimulus('stim_type="DN"'),'mean_trace','time');
+                        ret2p.Stimulus('stim_type="DN"'),'dt_trace','time');
                 otherwise
                     [dtrace, t_time] = fetch1(ret2p.Trace(key) & ...
                         ret2p.Stimulus('stim_type="DN"'),'dt_trace','time');
@@ -253,17 +245,89 @@ classdef CaRF < dj.Relvar & dj.AutoPopulate
                 rf(:,:,i) = imfilter(rf_raw(:,:,i),w,'circular');   % smooth for fitting
             end
             
-            % extract time and space kernels with svd
-            [U,~,V] = svd(reshape(rf,[],length(rf)));
-            tc = V(:,1);
-            map = reshape(U(:,1),size(rf,1),size(rf,2));
+            % generate tc/2D map from 20 most activated pixels
+            rf2 = reshape(rf,[],size(rf,3));
+            [~, i] = sort(abs(rf2(:)),'descend');
+            [i1, ~] = ind2sub(size(rf2),i(1:30));
             
-            % adjust sign
-            [~, i] = max(abs(map(:)));
-            s = sign(map(i));
-            map = map*s;
-            tc = tc*s;
+            tc = mean(rf2(unique(i1),:));
+            map = reshape((tc*rf2'),size(rf,1),size(rf,2));
             
+        end
+        
+        
+        function [rf, map, tc, time] = rf_der_nmm(~,key)
+            
+            % implements rf mapping based on NMM model by Butts et al.
+            
+            addpath(getLocalPath('/lab/libraries/NIMtoolbox/'))
+            addpath(getLocalPath('/lab/libraries/NMM/'))
+            addpath(getLocalPath('/lab/libraries/minFunc_2012/minFunc/'))
+            addpath(getLocalPath('/lab/libraries/minConf/minConf/'))
+            addpath(getLocalPath('/lab/libraries/minConf/minFunc/'))
+            addpath(genpath(getLocalPath('/lab/libraries/L1General/')))
+            
+            % get  trace
+            switch fetch1(ret2p.Dataset(key),'target')
+                case 'BC_T'
+                    [dtrace, t_time] = fetch1(ret2p.Trace(key) & ...
+                        ret2p.Stimulus('stim_type="DN"'),'dt_trace','time');
+                otherwise
+                    [dtrace, t_time] = fetch1(ret2p.Trace(key) & ...
+                        ret2p.Stimulus('stim_type="DN"'),'dt_trace','time');
+            end
+            
+            % get stimulus
+            [stim, s_time] = fetch1(ret2p.StimInfo(key) & ...
+                ret2p.Stimulus('stim_type="DN"'),'stim','time');
+            [nX, nY, nT] = size(stim);
+            stim = reshape(stim,[],nT);
+            
+            % interpolate and process trace
+            dt = diff(s_time(1:2))/10;
+            s_time_hr = s_time(1):dt:s_time(end);
+            
+            dtrace = interp1(t_time,dtrace,s_time_hr);
+            dtrace = dtrace - nanmean(dtrace);
+            sd = nanmedian(abs(dtrace))/0.6745;
+            dtrace = dtrace/sd;
+            
+            % interpolate preprocess stimulus
+            stim = interp1(s_time,stim',s_time_hr,'nearest')';
+            stim = stim-mean(stim(:));
+            
+            nLags = 35;
+            params_stim = NMMcreate_stim_params([nLags nX nY], 1, 1, 1 );
+            
+            Xstim = create_time_embedding( ...
+                permute(reshape(stim,nX,nY,[]),[3 1 2]), params_stim );
+            
+            % initialize and fit NMM model
+            params_reg = NMMcreate_reg_params('lambda_d2X',100,'lambda_d2T',100);
+            
+            fit = NMMinitialize_model(params_stim, 1, {'lin'}, params_reg, 1, [], 'linear' );
+            fit = NMMfit_filters(fit, dtrace, Xstim, [],[], 1);
+            
+            rf = permute(reshape(fit.mods(1).filtK, ...
+                params_stim.stim_dims), [2 3 1]);
+            
+            % generate tc/2D map from 20 most activated pixels
+            rf2 = reshape(rf,[],size(rf,3));
+            [~, i] = sort(abs(rf2(:)),'descend');
+            [i1, ~] = ind2sub(size(rf2),i(1:30));
+            
+            tc = mean(rf2(unique(i1),:));
+            %             map = reshape(mean(rf2(:,unique(i2)),2),size(rf,1),size(rf,2));
+            map = reshape((tc*rf2'),nX,nY);
+            
+            time = (0:dt:(nLags-1)*dt) + dt/2;
+            
+            rmpath(getLocalPath('/lab/libraries/NIMtoolbox/'))
+            rmpath(getLocalPath('/lab/libraries/NMM/'))
+            rmpath(getLocalPath('/lab/libraries/minFunc_2012/minFunc/'))
+            rmpath(getLocalPath('/lab/libraries/minConf/minConf/'))
+            rmpath(getLocalPath('/lab/libraries/minConf/minFunc/'))
+            rmpath(genpath(getLocalPath('/lab/libraries/L1General/')))
             
         end
     end
