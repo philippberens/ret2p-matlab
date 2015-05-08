@@ -10,14 +10,14 @@ mean_trace          : longblob              # average trace vector
 dt_trace            : longblob              # differential trace vector
 time                : longblob              # time vector
 trace_by_trial      : longblob              # traces by trial
-baseline            : longblob                 # baseline
+baseline            : longblob              # baseline
 scale               : float                 # normalization
 %}
 
 classdef Trace < dj.Relvar & dj.AutoPopulate
     properties(Constant)
         table = dj.Table('ret2p.Trace');
-        popRel = ret2p.Stimulus * ret2p.ROI('tp=1');
+        popRel = ret2p.DrugTreatment * ret2p.ROI & 'tp=1';
     end
     
     methods
@@ -33,6 +33,7 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
             path = fetch1(ret2p.Dataset(key),'path');
             stim = fetch1(ret2p.Stimulus(key),'stim_type');
             scan = fetch1(ret2p.Quadrant(key),'folder');
+            drug = fetch1(ret2p.DrugTreatment(key),'folder');
             
             if strcmp(stim,'GB')
                 file = sprintf('%s_data.ibw','colour');
@@ -40,7 +41,7 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                 file = sprintf('%s_data.ibw',stim);
             end
             
-            y = IBWread(getLocalPath(fullfile(path,scan,file)));
+            y = IBWread(getLocalPath(fullfile(path,scan,drug,file)));
             
             disp(getLocalPath(fullfile(path,scan,file)))
             
@@ -86,9 +87,6 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     scale = max(abs(mean_trace(:)));
                     mean_trace = mean_trace/max(abs(mean_trace(:)));
                     qi = max(qi);
-                    
-                    
-                    
                     
                     if size(mean_trace,1)<32
                         mean_trace = [mean_trace; mean(mean_trace(end-2:end,:),1)];
