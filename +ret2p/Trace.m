@@ -43,7 +43,7 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
             
             y = IBWread(getLocalPath(fullfile(path,scan,drug,file)));
             
-            disp(getLocalPath(fullfile(path,scan,file)))
+%             disp(getLocalPath(fullfile(path,scan,file)))
             
             target = fetchn(ret2p.Dataset(key),'target');
             
