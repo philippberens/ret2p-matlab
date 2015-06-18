@@ -248,7 +248,7 @@ classdef CentSurr < dj.Relvar & dj.AutoPopulate
             [~,idx] = max(s(1:4));
             center = rf(idx,:);
             
-            surround = mean(rf(min(idx+(2:4),size(rf,1)),:));
+            surround = mean(rf(min(idx+(3:5),size(rf,1)),:));
             
             profiles = [center*rf'; surround*rf'];
             
