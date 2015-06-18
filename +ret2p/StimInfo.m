@@ -1,7 +1,7 @@
 %{
 ret2p.StimInfo (imported) # Stimulus
 
--> ret2p.Stimulus
+-> ret2p.DrugTreatment
 ---
 stim                : longblob               # stimulus trace or frames
 time                : longblob               # time vector
@@ -13,7 +13,7 @@ spatial_sz = null   : float                  # spatial size of stim
 classdef StimInfo < dj.Relvar & dj.AutoPopulate
     properties(Constant)
         table = dj.Table('ret2p.StimInfo');
-        popRel = ret2p.Stimulus;
+        popRel = ret2p.DrugTreatment;
     end
     
     methods 
@@ -27,11 +27,20 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
             
             % get path information & read file
             stimType = lower(fetch1(ret2p.Stimulus(key),'stim_type'));
+            
+            switch lower(fetch1(ret2p.DrugTreatment(key),'drug_type'))
+                case 'none'
+                    file = fetch1(ret2p.Stimulus(key),'stim_file');                    
+                otherwise
+                    file = fetch1(ret2p.Stimulus(key),'stim_file');
+                    folder = fetch1(ret2p.DrugTreatment(key),'folder');
+                    k = strfind(file,'\');
+                    file = [file(1:k(end)) folder '\' file(k(end)+1:end)];   
+            end
+            
             if ~strcmp(stimType,'ringflicker')
-                file = fetch1(ret2p.Stimulus(key),'stim_file');
                 y = IBWread(getLocalPath(file));
             else
-                file = fetch1(ret2p.Stimulus(key),'stim_file');
                 y = [];
             end
             
