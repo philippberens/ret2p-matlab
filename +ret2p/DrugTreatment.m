@@ -1,11 +1,11 @@
 %{
 ret2p.DrugTreatment (manual) # List of drugtreatments for that dataset
-
 -> ret2p.Stimulus
-drug_num        : tinyint unsigned      # number of drug
+drug_num        : tinyint unsigned       # number of drug
 ---
-drug_type       : enum('None','Tpmpa/Gabazine','Washout')     # stimulus names
-folder          : varchar(255)                      # path to files
+drug_type                   : enum('None','Tpmpa/Gabazine','Tpmpa','Gabazine','Strychnine','Washout') # stimulus names
+folder                      : varchar(255)                  # path to files
+drug_concentration          : blob                          # drugconcentration
 %}
 
 classdef DrugTreatment < dj.Relvar

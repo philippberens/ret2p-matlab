@@ -19,14 +19,6 @@ classdef FeatType < dj.Relvar & dj.AutoPopulate
         end
         
         
-        function plot(self,filter)
-            
-            if nargin > 1
-                self.restrict(filter);
-            end
-            T = fetch(self,'*');
-            
-        end
     end
     
     methods(Access = protected)
@@ -34,21 +26,23 @@ classdef FeatType < dj.Relvar & dj.AutoPopulate
             
             self.insert(key)
             
-            key.is_member=1;
-            stims = fetchn(ret2p.ROI * ret2p.Stimulus & ret2p.ROISetMember(key),'stim_type');
-            uStims = unique(stims);
+            stims = fetchn(ret2p.ROI * ret2p.Stimulus & ret2p.ROISetMember,'stim_type');
+%             uStims = unique(stims);
+
+            pStims = fetchn(ret2p.FeatStim,'feat_stim');
             
-            quads = fetch(ret2p.ROI & ret2p.ROISetMember(key));
-            nQ = length(quads);
+            roiKeys = fetch(ret2p.ROI & ret2p.ROISetMember);
+            N = length(roiKeys);
             
-            for i=1:length(uStims)
-                if sum(strcmp(uStims{i},stims))== nQ
-                    newKey = rmfield(key,'is_member');
+            for i=1:length(pStims)
+                if sum(strcmp(pStims{i},stims))== N
+                    disp(pStims{i})
+                    newKey = key;
                     stim_num = fetch1(ret2p.FeatStim & ...
-                        sprintf('feat_stim="%s"', uStims{i}),'feat_stim_num');
+                        sprintf('feat_stim="%s"', pStims{i}),'feat_stim_num');
                     newKey.feat_stim_num=stim_num;
                     
-                    makeTuples(ret2p.Feat,newKey)
+                    makeTuples(ret2p.FeatBasis,newKey)
                 end
                 
             end
