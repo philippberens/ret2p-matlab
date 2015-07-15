@@ -171,7 +171,7 @@ classdef Trace < dj.Relvar & dj.AutoPopulate
                     
                     
                     % sampling rate & time vector
-                    yt = IBWread(getLocalPath(fullfile(path,scan, ...
+                    yt = IBWread(getLocalPath(fullfile(path,scan,drug, ...
                         [file(1:end-4) '_timing' file(end-3:end)])));
                     time = yt.y(:,key.roi_num)/1000;
                     

@@ -47,9 +47,18 @@ classdef CentSurrChirpPrediction < dj.Relvar & dj.AutoPopulate
             [center, surround, time] = ...
                 fetch1(ret2p.CentSurr(key),'center','surround','time');
             
-            center = fliplr(center(time>0));
-            surround = fliplr(surround(time>0));
-            time = fliplr(time(time>0));
+%             center = center - mean(center(time<0.015));
+%             surround = surround - mean(surround(time<0.015));
+            
+            if key.param_set_num == 2
+                center = center(time>0);
+                surround = surround(time>0);
+                time = time(time>0);
+            elseif key.param_set_num == 1
+                center = fliplr(center(time>0));
+                surround = fliplr(surround(time>0));
+                time = fliplr(time(time>0));
+            end
             
             
             % get chirp traces for local and global chirp
@@ -66,10 +75,10 @@ classdef CentSurrChirpPrediction < dj.Relvar & dj.AutoPopulate
             stim = stim / max(stim);
             
             % all to same sampling rate
-%             gChirp =  interp1(gTime,gChirp,sTime);
-%             lChirp =  interp1(gTime,lChirp,sTime);
-            stim =  interp1(sTime,stim,gTime);
-
+            %             gChirp =  interp1(gTime,gChirp,sTime);
+            %             lChirp =  interp1(gTime,lChirp,sTime);
+            stim =  interp1(1/1.03125*sTime,stim,gTime);
+            
             dt = diff(gTime(1:2));
             iTime = time(1):dt:time(end);
             center = interp1(time,center,iTime);
@@ -81,8 +90,17 @@ classdef CentSurrChirpPrediction < dj.Relvar & dj.AutoPopulate
             pred = zeros(1,length(stim));
             fL = length(center);
             
+            if key.param_set_num == 2
+                center = fliplr(center)';
+                surround = fliplr(surround)';
+            
+            elseif key.param_set_num == 1
+                center = fliplr(center)';
+                surround = fliplr(surround)';
+            end
+            
             for i=fL+1:length(stim)
-                pred(i) = stim(i-fL:i-1)'*center';
+                pred(i) = stim(i-fL:i-1)'*center/mean(abs(center));
             end
             
             
