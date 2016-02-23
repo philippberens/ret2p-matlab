@@ -72,7 +72,7 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
                     sr = 500;
                     time = 0:1/sr:(length(s)-1)*1/sr;
                     
-                case {'chirp','localchirp'}
+                case {'chirp','localchirp','surroundchirp'}
                     % for all other stimuli, time and sr are available
                     s = y.y;
                     sr = 1/y.dx;
@@ -80,13 +80,13 @@ classdef StimInfo < dj.Relvar & dj.AutoPopulate
                     time = time(1:end-1)';
                     spatial_sz = 500;
                     
-                case 'ff' % not checked yet
-                    % replace by code to go from stim sequence to the
-                    % stimulus
+                case {'ff100', 'ff500'} 
                     s = y.y;
-                    sr = 1/100;
-                    time = (0:1:length(s)-1)/100; 
+                    sr = 1000/y.dx;
+                    time = 0:y.dx:(size(s,1)-1)*y.dx;
                     
+%                     y = IBWread(getLocalPath([file(1:end-12) 'Stim_timing.ibw']));
+%                     time = (time + y.y(1))/1000;                    
                 case 'step'
                     s = y.y;
                     sr = 1/y.dx;

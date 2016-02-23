@@ -90,7 +90,7 @@ classdef FeatBasis < dj.Relvar
             
             function [basis, m, s, v] = feat_spca
                 
-                addpath(getLocalPath('\lab\libraries\matlablib\spasm\'))
+                addpath(getLocalPath('\lab\libraries\spasm\'))
                 
                 selIdx = qi>.2;
                 
@@ -115,7 +115,7 @@ classdef FeatBasis < dj.Relvar
                 
                 v = cumsum(v(1:20))/sum(v);
                 
-                rmpath(getLocalPath('\lab\libraries\matlablib\spasm\'))
+                rmpath(getLocalPath('\lab\libraries\spasm\'))
             end
         end
     end

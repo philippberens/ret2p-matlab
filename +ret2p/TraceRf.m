@@ -6,7 +6,7 @@ ret2p.TraceRf (imported) # receptive field using dense noise
 ---
 
 rf          : longblob  # receptive field, smoothed
-map         : longblob  # 2D RF map
+map         : longblob  # 2D RF map (svd)
 tc          : longblob  # time course of activiation, 1SD of center
 tc2          : longblob  # time course of activiation, 1SD of center
 m           : longblob  # mean of receptive field averaged over all clean RFs
@@ -14,11 +14,14 @@ s           : longblob  # SD of receptive field averaged over all clean RFs
 y           : longblob  # y position
 x           : longblob  # x position
 time        : longblob  # time of time kernel
+sv          : longblob  # svs of SVD
 size        : float     # size of the rf
-quality     : float     # quality index: variance accounted for by fit
+quality     : float     # quality index: maximum variance frame / variance before 0
+quality2     : float    # quality index: variance accounted for by fit
 aspect_ratio: float     # aspect ratio of SD ellipse
 rad_bins    : longblob  # radial bin positions
 rad         : longblob  # radial bin amplitude
+sv_ratio    : float     # ratio of 1st to 2nd sv
 %}
 
 classdef TraceRf < dj.Relvar & dj.AutoPopulate
@@ -43,20 +46,19 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
             for i=1:length(key)
                 key(i)
                 [~, tc, map, time, x, y] = ...
-                    fetch1(ret2p.CaRF(key(i)),'rf', 'tc', 'map', ...
+                    fetch1(ret2p.TraceRf(key(i)),'rf', 'tc', 'map', ...
                     'time', 'x', 'y');
                 
                 subplot(211)
                 imagesc(y,x,map)
                 hold on
-                if fetch1(ret2p.CaRF(key(i)),'quality')<.8
-                    [m, s] = fetch1(ret2p.CaRF(key(i)),'m','s');
-                    h = plotGauss(m,diag(s.^2),1,'r');
-                    set(h,'color','r')
-                    h = plotGauss(m,diag(s.^2),2,'r');
-                    set(h,'color','r','linestyle','--')
-                    plot(m(1),m(2),'r+')
-                end
+                [m, s] = fetch1(ret2p.TraceRf(key(i)),'m','s');
+                h = plotGauss(m,diag(s.^2),1,'r');
+                set(h,'color','r')
+                h = plotGauss(m,diag(s.^2),2,'r');
+                set(h,'color','r','linestyle','--')
+                plot(m(1),m(2),'r+')
+                
                 xlabel('\mu m')
                 ylabel('\mu m')
                 set(gca,'DataAspectRatio',[1.3 1 1])
@@ -84,10 +86,10 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
             param_key = fetch1(ret2p.TraceRfParams(key),'rf_param_key');
             switch param_key
                 case 'der_sta'
-                    [rf, map, tc, time] = rf_der_sta(ret2p.TraceRf,key);
+                    [rf, map, tc, time, sv] = rf_der_sta(ret2p.TraceRf,key);
                     
                 case 'der_nmm'
-                    [rf, map, tc, time] = rf_der_nmm(ret2p.TraceRf,key);
+                    [rf, map, tc, time, sv] = rf_der_nmm(ret2p.TraceRf,key);
                     
                     
                 otherwise
@@ -159,6 +161,14 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
                 aspect_ratio = 1/aspect_ratio;
             end
             
+            
+            % quality
+            v = squeeze(var(reshape(rf,[],1,length(time))));
+            idx = time<0;
+            v0 = mean(v(idx));
+            vm = max(v(~idx));
+            quality = vm/v0;
+            
             %% fill tuple
             tuple = key;
             tuple.rf = rf;
@@ -170,16 +180,19 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
             tuple.x = x;
             tuple.y = y;
             tuple.time = time;
-            tuple.quality = var_ratio;
+            tuple.quality2 = var_ratio;
+            tuple.quality = quality;
             tuple.size = rf_size;
             tuple.aspect_ratio = aspect_ratio;
             tuple.rad_bins = bins;
             tuple.rad = rad;
+            tuple.sv = sv;
+            tuple.sv_ratio = sv(1)/sv(2);
             
             self.insert(tuple);
         end
         
-        function [rf, map, tc, time] = rf_der_sta(~,key)
+        function [rf, map, tc, time, s] = rf_der_sta(~,key)
             
             % implements simple rf mapping via thresholding
             
@@ -233,8 +246,7 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
             rf_raw = reshape(zs,size(mtstim,1),size(mtstim,2));
             rf_raw = flipdim(reshape(rf_raw,20,15,[]),1);
             clear mtstim
-            
-            
+                       
             % smooth receptive field
             w = window(@gausswin,3);
             w = w * w';
@@ -245,18 +257,26 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
                 rf(:,:,i) = imfilter(rf_raw(:,:,i),w,'circular');   % smooth for fitting
             end
             
-            % generate tc/2D map from 20 most activated pixels
+            % estimate raw tc 
             rf2 = reshape(rf,[],size(rf,3));
             [~, i] = sort(abs(rf2(:)),'descend');
             [i1, ~] = ind2sub(size(rf2),i(1:30));
             
-            tc = mean(rf2(unique(i1),:));
-            map = reshape((tc*rf2'),size(rf,1),size(rf,2));
+            tc_raw = mean(rf2(unique(i1),:));
+            
+            % extract map and time course with SVD
+            [U,S,V] = svd(rf2);
+            tc = V(:,1)';
+            sg = sign(corr(tc',tc_raw')); % get sign to flip kernel if needed
+            tc = tc * sg;
+            
+            map = reshape(U(:,1),20,15) * sg;
+            s = diag(S);
             
         end
         
         
-        function [rf, map, tc, time] = rf_der_nmm(~,key)
+        function [rf, map, tc, time, s] = rf_der_nmm(~,key)
             
             % implements rf mapping based on NMM model by Butts et al.
             
@@ -311,14 +331,22 @@ classdef TraceRf < dj.Relvar & dj.AutoPopulate
             rf = permute(reshape(fit.mods(1).filtK, ...
                 params_stim.stim_dims), [2 3 1]);
             
-            % generate tc/2D map from 20 most activated pixels
+             % estimate raw tc 
             rf2 = reshape(rf,[],size(rf,3));
             [~, i] = sort(abs(rf2(:)),'descend');
             [i1, ~] = ind2sub(size(rf2),i(1:30));
             
-            tc = mean(rf2(unique(i1),:));
-            %             map = reshape(mean(rf2(:,unique(i2)),2),size(rf,1),size(rf,2));
-            map = reshape((tc*rf2'),nX,nY);
+            tc_raw = mean(rf2(unique(i1),:));
+            
+            % extract map and time course with SVD
+            [U,S,V] = svd(rf2);
+            tc = V(:,1)';
+            sg = sign(corr(tc',tc_raw')); % get sign to flip kernel if needed
+            tc = tc * sg;
+            
+            map = reshape(U(:,1),nX,nY) * sg;
+            s = diag(S);
+            
             
             time = (0:dt:(nLags-1)*dt) + dt/2;
             
