@@ -3,7 +3,7 @@ ret2p.DrugTreatment (manual) # List of drugtreatments for that dataset
 -> ret2p.Stimulus
 drug_num        : tinyint unsigned       # number of drug
 ---
-drug_type                   : enum('None','Tpmpa/Gabazine','Tpmpa','Gabazine','Strychnine','Washout') # stimulus names
+drug_type                   : enum('None','Tpmpa/Gabazine','Tpmpa','Gabazine','Strychnine','Washout','L-AP4') # drug names
 folder                      : varchar(255)                  # path to files
 drug_concentration          : blob                          # drugconcentration
 %}

@@ -42,13 +42,13 @@ classdef ROISet < dj.Relvar & dj.AutoPopulate
             for i=1:length(roiKey)
                 
                 % stimulus
-                if ~isempty(require_stim)
+                if ~isempty(require_stim) || ~strcmp(require_stim,'')
                     s = fetch(ret2p.Stimulus(roiKey(i)) & sprintf('stim_type="%s"',require_stim));
                     stim_present = ~isempty(s);
                 end
                 
                 % drug
-                if ~isempty(require_drug)
+                if ~isempty(require_drug) || ~strcmp(require_drug,'')
                     s = fetch(ret2p.DrugTreatment(roiKey(i)) & sprintf('drug_type="%s"',require_drug));
                     drug_present = ~isempty(s);
                 end
